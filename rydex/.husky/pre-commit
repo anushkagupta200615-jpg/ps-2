@@ -1,0 +1,2 @@
+cd rydex
+npx lint-staged
