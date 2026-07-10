@@ -13,9 +13,20 @@ function GeoUpdater({ userId }: { userId: string | undefined }) {
 
     socketRef.current = getSocket();
 
-    // ✅ Emit identity only once
-    socketRef.current.emit("identity", userId);
-       
+    const authenticateSocket = async () => {
+      try {
+        const res = await fetch("/api/socket-token");
+        if (res.ok) {
+          const { token } = await res.json();
+          socketRef.current.emit("identity", { token });
+        } else {
+          console.error("Failed to fetch socket token");
+        }
+      } catch (error) {
+        console.error("Error fetching socket token:", error);
+      }
+    };
+    authenticateSocket();
     const watcher = navigator.geolocation.watchPosition(
       (pos) => {
         const now = Date.now();

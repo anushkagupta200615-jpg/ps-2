@@ -3,7 +3,7 @@ import http from "http"
 import dotenv from "dotenv"
 import { Server } from "socket.io"
 import axios from "axios"
-
+import jwt from "jsonwebtoken"
 dotenv.config()
 
 import mongoose from "mongoose"
@@ -41,15 +41,33 @@ app.post("/emit", async (req, res) => {
 
 io.on("connection", (socket) => {
 
-  socket.on("identity", async (userId) => {
+  socket.on("identity", async (payload) => {
+    try {
+      const token = payload?.token;
+      
+      if (!token) {
+        console.error("No token provided in identity event");
+        return;
+      }
+      
+      const secret = process.env.AUTH_SECRET;
+      if (!secret) {
+        console.error("AUTH_SECRET is missing");
+        return;
+      }
 
-    socket.userId = userId
+      const decoded = jwt.verify(token, secret);
+      const userId = decoded.userId;
 
-    await User.findByIdAndUpdate(userId, {
-      socketId: socket.id,
-      isOnline: true
-    })
+      socket.userId = userId;
 
+      await User.findByIdAndUpdate(userId, {
+        socketId: socket.id,
+        isOnline: true
+      });
+    } catch (error) {
+      console.error("Invalid token in identity event:", error.message);
+    }
   })
 
 // server.js — sab jagah ek hi format rakho
