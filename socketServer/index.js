@@ -8,10 +8,20 @@ dotenv.config()
 
 import mongoose from "mongoose"
 import User from "./models/user.models.js"
+import rateLimit from "express-rate-limit"
 
 await mongoose.connect(process.env.MONGODB_URL)
 const app=express()
 app.use(express.json())
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests from this IP, please try again after 15 minutes",
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+app.use(apiLimiter)
 const server=http.createServer(app)
 const port=process.env.PORT || 5000
 
@@ -38,6 +48,8 @@ app.post("/emit", async (req, res) => {
     res.status(500).json({ success: false });
   }
 });
+const locationUpdateTimestamps = new Map();
+const driverLocationUpdateTimestamps = new Map();
 
 io.on("connection", (socket) => {
 
@@ -60,7 +72,14 @@ socket.on("join-booking", (bookingId) => {
 });
 
 socket.on("driver-location-update", (data) => {
-  io.to(`booking-${data.bookingId}`)   // ✅ already sahi
+  const now = Date.now();
+  const key = socket.userId || data.bookingId;
+  const lastUpdate = driverLocationUpdateTimestamps.get(key) || 0;
+  
+  if (now - lastUpdate < 1000) return;
+  driverLocationUpdateTimestamps.set(key, now);
+
+  io.to(`booking-${data.bookingId}`)
     .emit("driver-location", {
       latitude: data.latitude,
       longitude: data.longitude,
@@ -77,6 +96,12 @@ socket.on("chat-message", (msg) => {
 
     if (!socket.userId) return
 
+    const now = Date.now();
+    const lastUpdate = locationUpdateTimestamps.get(socket.userId) || 0;
+    
+    if (now - lastUpdate < 1000) return;
+    locationUpdateTimestamps.set(socket.userId, now);
+
     await User.findByIdAndUpdate(socket.userId, {
       location: {
         type: "Point",
@@ -90,6 +115,9 @@ socket.on("chat-message", (msg) => {
   socket.on("disconnect", async () => {
 
     if (!socket.userId) return
+
+    locationUpdateTimestamps.delete(socket.userId);
+    driverLocationUpdateTimestamps.delete(socket.userId);
 
     await User.findByIdAndUpdate(socket.userId, {
       isOnline: false,
