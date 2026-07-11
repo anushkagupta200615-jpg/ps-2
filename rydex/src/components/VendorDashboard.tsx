@@ -362,14 +362,19 @@ function PricingModal({ open, onClose, pricing }: any){
     window.location.reload();
   };
 
-   useEffect(() => {
+  const [prevPricing, setPrevPricing] = useState(pricing);
+  const [prevOpen, setPrevOpen] = useState(open);
+  
+  if (pricing !== prevPricing || open !== prevOpen) {
+    setPrevPricing(pricing);
+    setPrevOpen(open);
     if (pricing) {
       setBaseFare(pricing.baseFare?.toString() || "");
       setPricePerKm(pricing.pricePerKm?.toString() || "");
       setWaitingCharge(pricing.waitingCharge?.toString() || "");
       setPreview(pricing.imageUrl || null);
     }
-  }, [pricing, open]);
+  }
 
   return (
     <AnimatePresence>

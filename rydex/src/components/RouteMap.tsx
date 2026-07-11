@@ -114,11 +114,20 @@ function ZoomControlsWrapper() {
 
 /* ─── MAIN ────────────────────────────────────────────────────────── */
 export default function RouteMap({ pickup, drop, onDistance, onChange }: Props) {
+  const [prevPickup, setPrevPickup] = useState(pickup);
+  const [prevDrop, setPrevDrop] = useState(drop);
   const [p1,    setP1]    = useState<[number, number] | null>(null);
   const [p2,    setP2]    = useState<[number, number] | null>(null);
   const [route, setRoute] = useState<[number, number][]>([]);
   const [ready, setReady] = useState(false);
   const [km,    setKm]    = useState<number | null>(null);
+
+  if (pickup !== prevPickup || drop !== prevDrop) {
+    setPrevPickup(pickup);
+    setPrevDrop(drop);
+    setReady(false);
+    setRoute([]);
+  }
 
   const geocode = async (q: string): Promise<[number, number] | null> => {
     const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=1`);
@@ -149,8 +158,6 @@ export default function RouteMap({ pickup, drop, onDistance, onChange }: Props) 
   };
 
   useEffect(() => {
-    setReady(false);
-    setRoute([]);
     (async () => {
       const a = await geocode(pickup);
       const b = await geocode(drop);

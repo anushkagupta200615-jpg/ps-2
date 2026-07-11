@@ -63,10 +63,12 @@ export default function Nav() {
   }, [userData]);
 
   /* Close on route change */
-  useEffect(() => {
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setMenuOpen(false);
     setProfileOpen(false);
-  }, [pathname]);
+  }
 
   /* Desktop outside click */
   useEffect(() => {

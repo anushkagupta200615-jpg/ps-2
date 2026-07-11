@@ -164,12 +164,10 @@ export default function LiveRideMap({
 
     } else {
       // ongoing / completed — only need driver→drop
-      // Clear pickup route immediately when status changes away from arriving
-      if (statusChanged) setRouteToPickup([]);
-
       fetch(`${base}${dlng},${dlat};${drlng},${drlat}${qs}`)
         .then(r => r.json())
         .then(dData => {
+          if (statusChanged) setRouteToPickup([]);
           if (dData.routes?.length)
             setRouteToDrop(
               dData.routes[0].geometry.coordinates.map(([lon, lat]: number[]) => [lat, lon])
