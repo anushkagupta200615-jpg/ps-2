@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import Booking from "@/models/booking.model";
 import { sendMail } from "@/lib/mailer";
+import { auth } from "@/auth";
 
 
 export async function POST(req: Request) {
@@ -20,6 +21,22 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { message: "Booking not found" },
         { status: 404 }
+      );
+    }
+
+    const session = await auth();
+
+    if (!session?.user?.id || booking.driver?.toString() !== session.user.id) {
+      return NextResponse.json(
+        { message: "Forbidden" },
+        { status: 403 }
+      );
+    }
+
+    if (booking.pickupOtpExpires && booking.pickupOtpExpires > new Date(Date.now() + 4 * 60 * 1000)) {
+      return NextResponse.json(
+        { message: "Please wait 60 seconds before requesting a new OTP" },
+        { status: 429 }
       );
     }
 
