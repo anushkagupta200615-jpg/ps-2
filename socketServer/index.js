@@ -21,9 +21,14 @@ const io=new Server(server,{
     }
 })
 
-
+const locationUpdateTimestamps = new Map();
 
 app.post("/emit", async (req, res) => {
+  const secret = req.headers["x-socket-secret"] || req.body.secret;
+  if (!process.env.SOCKET_SECRET || secret !== process.env.SOCKET_SECRET) {
+    return res.status(401).json({ success: false });
+  }
+
   const { userId, event, data } = req.body;
 
   try {
@@ -77,6 +82,11 @@ socket.on("chat-message", (msg) => {
 
     if (!socket.userId) return
 
+    const now = Date.now();
+    const lastUpdate = locationUpdateTimestamps.get(socket.userId) || 0;
+    if (now - lastUpdate < 5000) return;
+    locationUpdateTimestamps.set(socket.userId, now);
+
     await User.findByIdAndUpdate(socket.userId, {
       location: {
         type: "Point",
@@ -90,6 +100,8 @@ socket.on("chat-message", (msg) => {
   socket.on("disconnect", async () => {
 
     if (!socket.userId) return
+
+    locationUpdateTimestamps.delete(socket.userId);
 
     await User.findByIdAndUpdate(socket.userId, {
       isOnline: false,
