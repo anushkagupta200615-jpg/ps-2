@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import connectDb from "@/lib/db";
 import { auth } from "@/auth";
 
 import Booking from "@/models/booking.model";
 
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     // 1️⃣ Connect DB
     await connectDb();
@@ -20,6 +20,10 @@ export async function GET() {
     }
 
     // 3️⃣ Fetch Data
+    const searchParams = req.nextUrl.searchParams;
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "20");
+
     const bookings = await Booking.find({
       user: session.user.id,
     })
@@ -32,6 +36,8 @@ export async function GET() {
         select: "name",
       })
       .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
       .lean(); // ⚡ performance boost
 
     // 4️⃣ Empty Check (Optional)
