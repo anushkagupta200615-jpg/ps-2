@@ -24,6 +24,11 @@ const io=new Server(server,{
 
 
 app.post("/emit", async (req, res) => {
+  const secret = req.headers["x-socket-secret"] || req.body.secret;
+  if (!process.env.SOCKET_SECRET || secret !== process.env.SOCKET_SECRET) {
+    return res.status(401).json({ success: false });
+  }
+
   const { userId, event, data } = req.body;
 
   try {
