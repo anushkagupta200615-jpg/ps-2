@@ -75,7 +75,6 @@ export async function POST(req: NextRequest) {
 
     /* ---------- SEND OTP (PLACEHOLDER) ---------- */
     // 🔥 Replace with real email service (Nodemailer / Resend / AWS SES)
-    console.log(`OTP for ${email}: ${otp}`);
     await sendMail(
        email,
         "Your OTP for Email Verification",
