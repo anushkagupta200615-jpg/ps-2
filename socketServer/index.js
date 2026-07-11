@@ -8,6 +8,7 @@ dotenv.config()
 
 import mongoose from "mongoose"
 import User from "./models/user.models.js"
+const Booking = mongoose.models.Booking || mongoose.model("Booking", new mongoose.Schema({}, { strict: false }));
 
 await mongoose.connect(process.env.MONGODB_URL)
 const app=express()
@@ -59,18 +60,24 @@ socket.on("join-booking", (bookingId) => {
   socket.join(`booking-${bookingId}`);  // ← prefix add karo
 });
 
-socket.on("driver-location-update", (data) => {
-  io.to(`booking-${data.bookingId}`)   // ✅ already sahi
-    .emit("driver-location", {
-      latitude: data.latitude,
-      longitude: data.longitude,
-      status: "arriving"
-    });
+socket.on("driver-location-update", async (data) => {
+  const booking = await Booking.findById(data.bookingId);
+  if (booking && booking.driver?.toString() === socket.userId) {
+    io.to(`booking-${data.bookingId}`)   // ✅ already sahi
+      .emit("driver-location", {
+        latitude: data.latitude,
+        longitude: data.longitude,
+        status: "arriving"
+      });
+  }
 });
 
-socket.on("chat-message", (msg) => {
-  console.log("chat to room:", `booking-${msg.rideId}`);
-  io.to(`booking-${msg.rideId}`).emit("chat-message", msg);  // ← prefix add karo
+socket.on("chat-message", async (msg) => {
+  const booking = await Booking.findById(msg.rideId);
+  if (booking && (booking.driver?.toString() === socket.userId || booking.user?.toString() === socket.userId)) {
+    console.log("chat to room:", `booking-${msg.rideId}`);
+    io.to(`booking-${msg.rideId}`).emit("chat-message", msg);  // ← prefix add karo
+  }
 });
 
   socket.on("update-location", async ({ latitude, longitude }) => {
