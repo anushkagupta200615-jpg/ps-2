@@ -47,31 +47,46 @@ export async function POST(req: Request) {
     );
   }
 
-  // Prevent duplicate active booking
-  const existing = await Booking.findOne({
-    user: session.user.id,
-    status: {
-      $in: ["requested", "awaiting_payment", "confirmed", "started"],
-    },
-  });
+  let booking;
+  try {
+    booking = await Booking.create({
+      user: session.user.id,
+      driver: driverId,
+      vehicle: vehicleId,
+      pickupAddress,
+      dropAddress,
+      pickupLocation,
+      dropLocation,
+      fare,
+      userMobileNumber: mobileNumber,
+      driverMobileNumber: driver.mobileNumber,
+      status: "requested",
+    });
+  } catch (error: any) {
+    if (error.code === 11000) {
+      const existingUserBooking = await Booking.findOne({
+        user: session.user.id,
+        status: {
+          $in: ["requested", "awaiting_payment", "confirmed", "started"],
+        },
+      });
 
-  if (existing) {
-    return NextResponse.json({ success: true, booking: existing });
+      if (existingUserBooking) {
+        return NextResponse.json({ success: true, booking: existingUserBooking });
+      }
+
+      return NextResponse.json(
+        { message: "Driver is currently unavailable" },
+        { status: 409 }
+      );
+    }
+    
+    console.error(error);
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    );
   }
-
-  const booking = await Booking.create({
-    user: session.user.id,
-    driver: driverId,
-    vehicle: vehicleId,
-    pickupAddress,
-    dropAddress,
-    pickupLocation,
-    dropLocation,
-    fare,
-    userMobileNumber: mobileNumber, // Mobile number from frontend (user's)
-    driverMobileNumber: driver.mobileNumber, // Mobile number from database (driver's)
-    status: "requested",
-  });
   
   await axios.post(
     `${process.env.NEXT_PUBLIC_SOCKET_SERVER}/emit`,

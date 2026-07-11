@@ -142,6 +142,18 @@ dropOtpExpires: {
   { timestamps: true }
 );
 
+const activeStatuses = ["requested", "awaiting_payment", "confirmed", "started"];
+
+BookingSchema.index(
+  { user: 1 },
+  { unique: true, partialFilterExpression: { status: { $in: activeStatuses } } }
+);
+
+BookingSchema.index(
+  { driver: 1 },
+  { unique: true, partialFilterExpression: { status: { $in: activeStatuses } } }
+);
+
 const Booking = mongoose.models.Booking ||
   mongoose.model<IBooking>("Booking", BookingSchema);
 export default Booking;
